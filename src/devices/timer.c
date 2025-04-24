@@ -210,6 +210,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
     }
   }
   intr_set_level(old_level);
+
+  if(timer_ticks () % TIMER_FREQ == 0){
+    // update load av and recent cpu for all threads must be here 
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

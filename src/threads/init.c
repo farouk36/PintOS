@@ -77,7 +77,7 @@ int
 main (void)
 {
   char **argv;
-
+  int load_avg = 0;
   /* Clear BSS. */  
   bss_init ();
 
@@ -116,7 +116,7 @@ main (void)
 #endif
 
   /* Start thread scheduler and enable interrupts. */
-  thread_start ();
+  thread_start (&load_avg);
   serial_init_queue ();
   timer_calibrate ();
 
