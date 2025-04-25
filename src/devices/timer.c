@@ -236,14 +236,15 @@ timer_interrupt (struct intr_frame *args UNUSED)
     }
   }
  
-
-  if(timer_ticks () % TIMER_FREQ == 0){
-    update_load_avg();
-    thread_foreach(update_recent_cpu, NULL);
-  }else if(ticks % 4 == 0){
-
-    thread_foreach(update_priority, NULL);
-
+  if(thread_mlfqs){
+    if(timer_ticks () % TIMER_FREQ == 0){
+      update_load_avg();
+      thread_foreach(update_recent_cpu, NULL);
+    }else if(ticks % 4 == 0){
+  
+      thread_foreach(update_priority, NULL);
+  
+    }
   }
    intr_set_level(old_level);
 

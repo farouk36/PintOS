@@ -219,6 +219,10 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
   *ready_threads = (list_size (&ready_list)) +
                                ((thread_current () != idle_thread) ? 1 : 0);
+
+  if(priority > thread_current()->priority)
+  thread_yield();
+
   return tid;
 }
 
@@ -371,6 +375,9 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  if(new_priority < thread_current()->priority){
+    thread_yield ();
+  }
 }
 
 /* Returns the current thread's priority. */
