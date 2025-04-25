@@ -138,7 +138,7 @@ sema_up (struct semaphore *sema)
   sema->value++;
 
   // Yield if the current thread's priority is less than the woken thread's priority
-  if (woken_thread != NULL && woken_thread->priority > thread_current()->priority) {
+  if (!thread_mlfqs && woken_thread != NULL && woken_thread->priority > thread_current()->priority) {
     thread_yield();
   }
 
