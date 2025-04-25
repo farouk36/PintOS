@@ -67,7 +67,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
-bool thread_mlfqs = false;
+bool thread_mlfqs = true;
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -182,7 +182,7 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
-  *ready_threads++;
+   
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -217,7 +217,8 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  *ready_threads = (list_size (&ready_list)) +
+                               ((thread_current () != idle_thread) ? 1 : 0);
   return tid;
 }
 
@@ -230,12 +231,13 @@ thread_create (const char *name, int priority,
 void
 thread_block (void) 
 {
-  *ready_threads--;
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
+  *ready_threads = (list_size (&ready_list)) +
+                               ((thread_current () != idle_thread) ? 1 : 0);
 }
 
 /* Transitions a blocked thread T to the ready-to-run state.
@@ -249,7 +251,7 @@ thread_block (void)
 void
 thread_unblock (struct thread *t) 
 {
-  *ready_threads++;
+ 
   enum intr_level old_level;
 
   ASSERT (is_thread (t));
@@ -264,6 +266,8 @@ thread_unblock (struct thread *t)
   }
   t->status = THREAD_READY;
   intr_set_level (old_level);
+  *ready_threads = (list_size (&ready_list)) +
+                               ((thread_current () != idle_thread) ? 1 : 0);
 }
 
 /* Returns the name of the running thread. */

@@ -44,7 +44,14 @@ bool compare(const struct list_elem *a, const struct list_elem *b, void *aux){
   return thread1->wakeup_time < thread2->wakeup_time;
 }
 void update_priority (struct thread *t, void *aux){
-  t->priority = PRI_MAX - fp_to_int_nearest((fp_div_int(t->recent_cpu,4))) - (t->nice * 2);
+  int T = PRI_MAX - fp_to_int_nearest((fp_div_int(t->recent_cpu,4))) - (t->nice * 2);
+  if(T > PRI_MAX){
+    t->priority = PRI_MAX;
+  }else if(T < PRI_MIN){
+    t->priority = PRI_MIN;
+  }else{
+    t->priority = T;
+  }
 }
 void update_recent_cpu (struct thread *t, void *aux){
   t->recent_cpu = fp_add_int(fp_mul(fp_div(fp_mul_int(*load_avg,2),fp_add_int(fp_mul_int(*load_avg,2),1)), t->recent_cpu), t->nice);
