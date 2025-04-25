@@ -43,6 +43,23 @@ bool compare(const struct list_elem *a, const struct list_elem *b, void *aux){
   struct sleeping_thread *thread2 = list_entry(b, struct sleeping_thread, element);
   return thread1->wakeup_time < thread2->wakeup_time;
 }
+void update_priority (struct thread *t, void *aux){
+  t->priority = PRI_MAX - fp_to_int_nearest((fp_div_int(t->recent_cpu,4))) - (t->nice * 2);
+}
+void update_recent_cpu (struct thread *t, void *aux){
+  t->recent_cpu = fp_add_int(fp_mul(fp_div(fp_mul_int(load_avg,2),fp_add_int(fp_mul_int(load_avg,2),1)), t->recent_cpu), t->nice);
+}
+void update_load_avg (struct thread *t, void *aux){
+  
+
+  fixed_point term1 = fp_div(int_to_fp(59), int_to_fp(60));
+  fixed_point term2 = fp_div(int_to_fp(1), int_to_fp(60));
+    
+  fixed_point term3 = fp_mul(term1, load_avg);
+  fixed_point term4 = fp_mul_int(term2, ready_threads);
+  load_avg = fp_add(term3, term4);
+
+}
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -209,11 +226,18 @@ timer_interrupt (struct intr_frame *args UNUSED)
       break;
     }
   }
-  intr_set_level(old_level);
+ 
 
   if(timer_ticks () % TIMER_FREQ == 0){
-    // update load av and recent cpu for all threads must be here 
+    thread_foreach(update_load_avg, NULL);
+    thread_foreach(update_recent_cpu, NULL);
+  }else if(ticks % 4 == 0){
+
+    thread_foreach(update_priority, NULL);
+
   }
+   intr_set_level(old_level);
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
