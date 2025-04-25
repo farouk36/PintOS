@@ -67,7 +67,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
-bool thread_mlfqs = true;
+bool thread_mlfqs = false;
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -374,8 +374,9 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  int prev_pri = thread_current()->priority;
   thread_current ()->priority = new_priority;
-  if(new_priority < thread_current()->priority){
+  if(new_priority < prev_pri){
     thread_yield ();
   }
 }
