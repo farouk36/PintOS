@@ -14,7 +14,19 @@
 #include "fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+
 #endif
+
+void update_priority2 (struct thread *t, void *aux){
+  int T = PRI_MAX - fp_to_int_nearest((fp_div_int(t->recent_cpu,4))) - (t->nice * 2);
+  if(T > PRI_MAX){
+    t->priority = PRI_MAX;
+  }else if(T < PRI_MIN){
+    t->priority = PRI_MIN;
+  }else{
+    t->priority = T;
+  }
+}
 
 bool
 compare_thread_priority (const struct list_elem *a,
@@ -378,6 +390,11 @@ thread_set_priority (int new_priority)
   if(new_priority < thread_current()->priority){
     thread_yield ();
   }
+  enum intr_level old_level = intr_disable();
+  if(thread_mlfqs){
+    thread_foreach(update_priority2, NULL);
+  }
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -392,6 +409,14 @@ void
 thread_set_nice (int nice UNUSED) 
 {
   thread_current ()->nice = nice;
+  if(nice < thread_current()->nice){
+    thread_yield ();
+  }
+  enum intr_level old_level = intr_disable();
+  if(thread_mlfqs){
+    thread_foreach(update_priority2, NULL);
+  }
+   intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */

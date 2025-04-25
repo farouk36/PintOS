@@ -1,0 +1,10 @@
+mkdir -p build/devices
+mkdir -p build/lib
+mkdir -p build/lib/kernel
+mkdir -p build/lib/user
+mkdir -p build/tests/threads
+mkdir -p build/threads
+cp ../Makefile.build build/Makefile
+cd build && make check
+make[1]: Entering directory '/root/pintos/src/threads/build'
+make[1]: Leaving directory '/root/pintos/src/threads/build'
