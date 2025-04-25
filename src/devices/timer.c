@@ -47,25 +47,27 @@ void update_priority (struct thread *t, void *aux){
   t->priority = PRI_MAX - fp_to_int_nearest((fp_div_int(t->recent_cpu,4))) - (t->nice * 2);
 }
 void update_recent_cpu (struct thread *t, void *aux){
-  t->recent_cpu = fp_add_int(fp_mul(fp_div(fp_mul_int(load_avg,2),fp_add_int(fp_mul_int(load_avg,2),1)), t->recent_cpu), t->nice);
+  t->recent_cpu = fp_add_int(fp_mul(fp_div(fp_mul_int(*load_avg,2),fp_add_int(fp_mul_int(*load_avg,2),1)), t->recent_cpu), t->nice);
 }
-void update_load_avg (struct thread *t, void *aux){
+void update_load_avg (){
   
 
   fixed_point term1 = fp_div(int_to_fp(59), int_to_fp(60));
   fixed_point term2 = fp_div(int_to_fp(1), int_to_fp(60));
     
-  fixed_point term3 = fp_mul(term1, load_avg);
+  fixed_point term3 = fp_mul(term1, *load_avg);
   fixed_point term4 = fp_mul_int(term2, ready_threads);
-  load_avg = fp_add(term3, term4);
+  *load_avg = fp_add(term3, term4);
 
 }
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
-timer_init (void) 
+timer_init (int *ptr , fixed_point *ptr2) 
 {
+  load_avg = ptr2;
+  ready_threads= ptr ;
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
   list_init(&sleeping_threads);
@@ -229,7 +231,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
  
 
   if(timer_ticks () % TIMER_FREQ == 0){
-    thread_foreach(update_load_avg, NULL);
+    update_load_avg();
     thread_foreach(update_recent_cpu, NULL);
   }else if(ticks % 4 == 0){
 

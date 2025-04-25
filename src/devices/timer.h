@@ -3,11 +3,13 @@
 
 #include <round.h>
 #include <stdint.h>
+#include "threads/fixed_point.h"
 
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
-
-void timer_init (void);
+fixed_point *load_avg;
+int *ready_threads;
+void timer_init (int *ptr ,fixed_point *ptr2);
 void timer_calibrate (void);
 
 int64_t timer_ticks (void);

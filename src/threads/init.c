@@ -22,6 +22,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+#include "fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -77,7 +78,8 @@ int
 main (void)
 {
   char **argv;
-  int load_avg = 0;
+  fixed_point load_avg = int_to_fp(0);
+  int ready_threads = 0 ;
   /* Clear BSS. */  
   bss_init ();
 
@@ -107,7 +109,7 @@ main (void)
 
   /* Initialize interrupt handlers. */
   intr_init ();
-  timer_init ();
+  timer_init (&ready_threads , &load_avg);
   kbd_init ();
   input_init ();
 #ifdef USERPROG
@@ -116,7 +118,7 @@ main (void)
 #endif
 
   /* Start thread scheduler and enable interrupts. */
-  thread_start (&load_avg);
+  thread_start (&ready_threads , &load_avg);
   serial_init_queue ();
   timer_calibrate ();
 

@@ -58,7 +58,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
-bool thread_mlfqs;
+bool thread_mlfqs = true;
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -85,7 +85,8 @@ static tid_t allocate_tid (void);
 
    It is not safe to call thread_current() until this function
    finishes. */
-int * load_avg;
+int * ready_threads;
+fixed_point * load_avg;
 void
 thread_init () 
 {
@@ -106,9 +107,10 @@ thread_init ()
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
-thread_start (int * ptr) 
+thread_start (int * ptr , fixed_point *ptr2) 
 { 
-  load_avg = ptr ;
+  ready_threads = ptr ;
+  load_avg = ptr2;
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
@@ -170,7 +172,7 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
-  *load_avg++;
+  *ready_threads++;
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -218,7 +220,7 @@ thread_create (const char *name, int priority,
 void
 thread_block (void) 
 {
-  *load_avg--;
+  *ready_threads--;
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
@@ -237,7 +239,7 @@ thread_block (void)
 void
 thread_unblock (struct thread *t) 
 {
-  *load_avg++;
+  *ready_threads++;
   enum intr_level old_level;
 
   ASSERT (is_thread (t));
@@ -370,7 +372,8 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-   return FP_TO_INT_NEAREST(FP_MUL_INT(*load_avg, 100));
+   return fp_to_int_nearest(fp_mul_int(*load_avg, 100));
+   
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -494,11 +497,28 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  if (list_empty (&ready_list))
+  if (list_empty(&ready_list))
     return idle_thread;
-  else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+
+  if (thread_mlfqs) {
+    struct list_elem *e;
+    struct list_elem *max_elem = list_begin(&ready_list);
+
+    for (e = list_next(max_elem); e != list_end(&ready_list); e = list_next(e)) {
+      struct thread *t = list_entry(e, struct thread, elem);
+      struct thread *t_max = list_entry(max_elem, struct thread, elem);
+      if (t->priority > t_max->priority)
+        max_elem = e;
+    }
+
+    list_remove(max_elem);  // Remove the selected max-priority thread
+    return list_entry(max_elem, struct thread, elem);
+  }
+
+  // Default behavior: return front of ready list (FIFO)
+  return list_entry(list_pop_front(&ready_list), struct thread, elem);
 }
+
 
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
@@ -559,7 +579,6 @@ schedule (void)
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
-
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));

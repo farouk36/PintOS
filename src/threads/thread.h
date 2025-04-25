@@ -110,7 +110,7 @@ struct thread
 extern bool thread_mlfqs;
 
 void thread_init (void);
-void thread_start (int * ptr);
+void thread_start (int *ptr , fixed_point *ptr2);
 
 void thread_tick (void);
 void thread_print_stats (void);
