@@ -63,7 +63,7 @@ void update_load_avg (){
   fixed_point term2 = fp_div(int_to_fp(1), int_to_fp(60));
     
   fixed_point term3 = fp_mul(term1, *load_avg);
-  fixed_point term4 = fp_mul_int(term2, ready_threads);
+  fixed_point term4 = fp_mul_int(term2, *ready_threads);
   *load_avg = fp_add(term3, term4);
 
 }
