@@ -91,6 +91,14 @@ struct thread
     int priority;                       /* Priority. */
     int nice ;
     fixed_point recent_cpu;
+
+    //?added for donated priority
+    int base_priority;
+    struct lock *waiting_lock; /* Lock held by the thread. */
+    bool is_donated;
+    //?added for donated priority
+
+    
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
