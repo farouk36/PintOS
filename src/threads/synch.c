@@ -119,39 +119,37 @@ sema_try_down (struct semaphore *sema)
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
-void sema_up (struct semaphore *sema) 
-{
-  enum intr_level old_level;
-  
-  ASSERT (sema != NULL);
-
-  old_level = intr_disable ();
-  
-  struct thread *woken_thread = NULL;
-  if (!list_empty(&sema->waiters)) {
-    // If not in MLFQS, sort the waiters list by priority
-    if (!thread_mlfqs) {
-      list_sort(&sema->waiters, compare_sema_priority, NULL);
-    }
-    
-    // Pop the highest priority waiter
-    woken_thread = list_entry(list_pop_front(&sema->waiters),
-                              struct thread, elem);
-    thread_unblock(woken_thread);
-  }
-  sema->value++;
-
-  // Yield to higher priority thread if necessary
-  if (woken_thread != NULL && woken_thread->priority > thread_current()->priority && !thread_mlfqs){
-    if (!intr_context()) {
-      thread_yield();
-    } else {
-      intr_yield_on_return();
-    }
-  }
-
-  intr_set_level(old_level);
-}
+   void sema_up (struct semaphore *sema) 
+   {
+     enum intr_level old_level;
+   
+     ASSERT (sema != NULL);
+   
+     old_level = intr_disable ();
+     
+     struct thread *woken_thread = NULL;
+     if (!list_empty(&sema->waiters)) {
+         list_sort(&sema->waiters, compare_sema_priority, NULL);    
+       
+       woken_thread = list_entry(list_pop_front(&sema->waiters),
+                                struct thread, elem);
+       thread_unblock(woken_thread);
+     }
+   
+     sema->value++;
+   
+     // Check if we need to yield, regardless of MLFQS mode
+     if (woken_thread != NULL && 
+         woken_thread->priority > thread_current()->priority &&
+         !intr_context()) {
+       thread_yield();
+     } else if (woken_thread != NULL && 
+                woken_thread->priority > thread_current()->priority) {
+       intr_yield_on_return();
+     }
+   
+     intr_set_level(old_level);
+   }
 
 static void sema_test_helper (void *sema_);
 

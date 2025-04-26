@@ -79,7 +79,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
-bool thread_mlfqs;
+bool thread_mlfqs ;
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -279,12 +279,11 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  if (thread_mlfqs){
-    list_push_back (&ready_list, &t->elem);
-  }else{
-    list_insert_ordered (&ready_list, &t->elem,
-                           compare_thread_priority, NULL);
-  }
+ 
+   
+    list_insert_ordered (&ready_list, &t->elem,compare_thread_priority, NULL);
+                           
+  
   t->status = THREAD_READY;
   intr_set_level (old_level);
   *ready_threads = (list_size (&ready_list)) +
@@ -357,12 +356,10 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread){
-    if (thread_mlfqs){
-      list_push_back (&ready_list, &cur->elem);
-    }else{
-      list_insert_ordered (&ready_list, &cur->elem,
-                           compare_thread_priority, NULL);
-    }
+    
+      list_insert_ordered (&ready_list, &cur->elem,compare_thread_priority, NULL);
+                           
+    
   } 
     
   cur->status = THREAD_READY;
