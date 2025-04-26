@@ -391,19 +391,28 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  int prev_pri = thread_current()->priority;
-  thread_current ()->base_priority = new_priority;
-  if (!thread_current()-> is_donated){
-    thread_current ()->priority = new_priority;
-  }
-  if(new_priority < prev_pri){
-    thread_yield ();
-  }
-  enum intr_level old_level = intr_disable();
-  if(thread_mlfqs){
+  if (!thread_mlfqs) {
+    int old_priority = thread_current()->priority;
+    thread_current()->base_priority = new_priority;
+    
+    // Only update current priority if no donations or new priority is higher
+    if (list_empty(&thread_current()->locks_held) || new_priority > old_priority)
+      thread_current()->priority = new_priority;
+      
+    // Yield if priority decreased
+    if (thread_current()->priority < old_priority)
+      thread_yield();
+  } else {
+    // For MLFQS mode, directly set priority
+    thread_current()->priority = new_priority;
+    if (new_priority < thread_current()->priority){
+       thread_yield();
+    }
+    enum intr_level old_level = intr_disable();
     thread_foreach(update_priority2, NULL);
+    intr_set_level(old_level);
+     
   }
-  intr_set_level(old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -538,8 +547,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
 
-  t->base_priority = priority;
-  t -> is_donated = false;
+  list_init(&t->locks_held);
+  t -> base_priority = priority;
   t -> waiting_lock = NULL;
 
   t->magic = THREAD_MAGIC;
