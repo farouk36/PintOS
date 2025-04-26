@@ -79,7 +79,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
-bool thread_mlfqs =true ;
+bool thread_mlfqs;
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -161,7 +161,11 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
+  if (thread_mlfqs) {
+    /* Increment recent_cpu for the running thread if it's not idle */
+    if (t != idle_thread)
+      t->recent_cpu = fp_add_int(t->recent_cpu, 1);
+  }
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -200,7 +204,7 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
-
+  
   ASSERT (function != NULL);
 
   /* Allocate thread. */
@@ -210,6 +214,9 @@ thread_create (const char *name, int priority,
 
   /* Initialize thread. */
   init_thread (t, name, priority);
+  t->nice = thread_current()->nice; // copy current thread's nice!
+  t->recent_cpu = thread_current()->recent_cpu;
+
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
@@ -226,7 +233,6 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-
   /* Add to run queue. */
   thread_unblock (t);
   *ready_threads = (list_size (&ready_list)) +
@@ -234,7 +240,6 @@ thread_create (const char *name, int priority,
 
   if(priority > thread_current()->priority)
   thread_yield();
-
   return tid;
 }
 
@@ -407,10 +412,11 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
-{
-  thread_current ()->nice = nice;
-  if(nice < thread_current()->nice){
+thread_set_nice (int new_nice) 
+{  
+  printf("fucntion set nice is called with value %d\n", new_nice);
+  thread_current ()->nice = new_nice;
+  if(new_nice < thread_current()->nice){
     thread_yield ();
   }
   enum intr_level old_level = intr_disable();
@@ -529,7 +535,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);

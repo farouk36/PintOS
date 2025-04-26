@@ -55,6 +55,10 @@ void update_priority (struct thread *t, void *aux){
 }
 void update_recent_cpu (struct thread *t, void *aux){
   t->recent_cpu = fp_add_int(fp_mul(fp_div(fp_mul_int(*load_avg,2),fp_add_int(fp_mul_int(*load_avg,2),1)), t->recent_cpu), t->nice);
+  // printf("nice : %d\n", t->nice);
+  // printf("recent_cpu : %d\n", fp_to_int_nearest(t->recent_cpu));
+  // printf("load_avg : %d\n", fp_to_int_nearest(*load_avg));
+
 }
 void update_load_avg (){
   
