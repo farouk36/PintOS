@@ -130,6 +130,8 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+  if (ticks <= 0)
+  return;  
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
@@ -224,20 +226,35 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  // thread_tick ();
+  thread_tick ();
+  
   enum intr_level old_level = intr_disable();
+  
+  struct list to_wake;
+  list_init(&to_wake);
+  
   while(!list_empty(&sleeping_threads)){
-    struct sleeping_thread *thread = list_entry(list_front(&sleeping_threads), struct sleeping_thread, element);
+    struct sleeping_thread *thread = list_entry(list_front(&sleeping_threads), 
+                                               struct sleeping_thread, element);
     if(thread->wakeup_time <= ticks){
-      sema_up(&thread->s);
       list_pop_front(&sleeping_threads);
+      list_push_back(&to_wake, &thread->element);
     }else{
       break;
     }
   }
- 
+  
+  intr_set_level(old_level);
+  
+  // Now wake up threads outside the critical section
+  while(!list_empty(&to_wake)){
+    struct sleeping_thread *thread = list_entry(list_pop_front(&to_wake),struct sleeping_thread, element); 
+                                          
+    sema_up(&thread->s);
+  }
+  
   if(thread_mlfqs){
-    if(timer_ticks () % TIMER_FREQ == 0){
+    if(ticks % TIMER_FREQ == 0){
       update_load_avg();
       thread_foreach(update_recent_cpu, NULL);
     }else if(ticks % 4 == 0){
@@ -246,8 +263,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
   
     }
   }
-   intr_set_level(old_level);
-
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

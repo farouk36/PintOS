@@ -119,31 +119,38 @@ sema_try_down (struct semaphore *sema)
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
-void
-sema_up (struct semaphore *sema) 
-{
-  enum intr_level old_level;
-
-  ASSERT (sema != NULL);
-
-  old_level = intr_disable ();
-  
-  struct thread *woken_thread = NULL;
-  if (!list_empty(&sema->waiters)) {
-    woken_thread = list_entry(list_pop_front(&sema->waiters),
-                              struct thread, elem);
-    thread_unblock(woken_thread);
-  }
-
-  sema->value++;
-
-  // Yield if the current thread's priority is less than the woken thread's priority
-  if (!thread_mlfqs && woken_thread != NULL && woken_thread->priority > thread_current()->priority) {
-    thread_yield();
-  }
-
-  intr_set_level(old_level);
-}
+   void
+   sema_up (struct semaphore *sema) 
+   {
+     enum intr_level old_level;
+   
+     ASSERT (sema != NULL);
+   
+     old_level = intr_disable ();
+     
+     struct thread *woken_thread = NULL;
+     if (!list_empty(&sema->waiters)) {
+       woken_thread = list_entry(list_pop_front(&sema->waiters),
+                                 struct thread, elem);
+       thread_unblock(woken_thread);
+     }
+   
+     sema->value++;
+   
+     // Only yield if we're not in an interrupt context
+     if (!thread_mlfqs && woken_thread != NULL && 
+         woken_thread->priority > thread_current()->priority &&
+         !intr_context()) {  // Add this check
+       thread_yield();
+     } else if (!thread_mlfqs && woken_thread != NULL && 
+                woken_thread->priority > thread_current()->priority) {
+       // If we are in interrupt context but need to yield,
+       // set a flag to yield on return from interrupt
+       intr_yield_on_return();
+     }
+   
+     intr_set_level(old_level);
+   }
 
 static void sema_test_helper (void *sema_);
 
