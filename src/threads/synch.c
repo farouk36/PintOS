@@ -32,6 +32,8 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
+bool come_from_condition = false;
 bool 
 compare_sema_priority (const struct list_elem *a,
                       const struct list_elem *b,
@@ -129,7 +131,8 @@ sema_try_down (struct semaphore *sema)
      
      struct thread *woken_thread = NULL;
      if (!list_empty(&sema->waiters)) {
-         list_sort(&sema->waiters, compare_sema_priority, NULL);    
+        if (!come_from_condition)
+                list_sort(&sema->waiters, compare_sema_priority, NULL);    
        
        woken_thread = list_entry(list_pop_front(&sema->waiters),
                                 struct thread, elem);
@@ -444,8 +447,10 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
       list_sort (&cond->waiters, compare_condition_priority, NULL);
     }
     struct semaphore_elem *waiter = list_entry (list_pop_front (&cond->waiters),
-                                               struct semaphore_elem, elem);
+                                        struct semaphore_elem, elem);
+    come_from_condition = true;
     sema_up (&waiter->semaphore);
+    come_from_condition = false;
   }
 }
 
