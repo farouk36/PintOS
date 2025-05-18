@@ -234,28 +234,18 @@ timer_interrupt (struct intr_frame *args UNUSED)
   
   enum intr_level old_level = intr_disable();
   
-  struct list to_wake;
-  list_init(&to_wake);
-  
   while(!list_empty(&sleeping_threads)){
-    struct sleeping_thread *thread = list_entry(list_front(&sleeping_threads), 
-                                               struct sleeping_thread, element);
+    struct sleeping_thread *thread = list_entry(list_front(&sleeping_threads),struct sleeping_thread, element); 
+                                               
     if(thread->wakeup_time <= ticks){
       list_pop_front(&sleeping_threads);
-      list_push_back(&to_wake, &thread->element);
+      sema_up(&thread->s);
     }else{
       break;
     }
   }
   
   intr_set_level(old_level);
-  
-  // Now wake up threads outside the critical section
-  while(!list_empty(&to_wake)){
-    struct sleeping_thread *thread = list_entry(list_pop_front(&to_wake),struct sleeping_thread, element); 
-                                          
-    sema_up(&thread->s);
-  }
   
   if(thread_mlfqs){
     if(ticks % TIMER_FREQ == 0){
